@@ -1,0 +1,15 @@
+package ${package_name}.rpc.api;
+
+import com.distributed.common.base.BaseService;
+import ${package_name}.dao.model.${model};
+import ${package_name}.dao.model.${model}Example;
+
+/**
+* ${model}Service接口
+* @Author: 周润斌
+* @Date: ${ctime}
+* @Description:
+*/
+public interface ${model}Service extends BaseService<${model}, ${model}Example> {
+
+}
