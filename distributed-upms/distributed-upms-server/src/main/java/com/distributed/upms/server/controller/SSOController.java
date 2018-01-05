@@ -8,6 +8,7 @@ import com.distributed.upms.client.shiro.session.UpmsSessionDao;
 import com.distributed.upms.common.constant.UpmsResult;
 import com.distributed.upms.common.constant.UpmsResultConstant;
 import com.distributed.upms.dao.model.UpmsSystem;
+import com.distributed.upms.dao.model.UpmsSystemExample;
 import com.distributed.upms.rpc.api.UpmsSystemService;
 import com.distributed.upms.rpc.api.UpmsUserService;
 import io.swagger.annotations.Api;
@@ -32,6 +33,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.UUID;
 
 /**
@@ -63,10 +66,51 @@ public class SSOController extends BaseController{
     @Autowired
     UpmsUserService upmsUserService;
 
+
+    @ApiOperation(value = "认证中心首页")
+    @RequestMapping(value = "/index", method = RequestMethod.GET)
+    public String index(HttpServletRequest request) throws Exception {
+        String appid = request.getParameter("appid");
+        String backurl = request.getParameter("backurl");
+        if (StringUtils.isBlank(appid)) {
+            throw new RuntimeException("无效访问！");
+        }
+        // 判断请求认证系统是否注册
+        UpmsSystemExample upmsSystemExample = new UpmsSystemExample();
+        upmsSystemExample.createCriteria()
+                .andNameEqualTo(appid);
+        int count = upmsSystemService.countByExample(upmsSystemExample);
+        if (0 == count) {
+            throw new RuntimeException(String.format("未注册的系统:%s", appid));
+        }
+        return "redirect:/sso/login?backurl=" + URLEncoder.encode(backurl, "utf-8");
+    }
+
     @ApiOperation(value = "登录")
     @RequestMapping(value = "/login", method = RequestMethod.GET)
     public String login(HttpServletRequest  request){
-
+        Subject subject = SecurityUtils.getSubject();
+        Session session = subject.getSession();
+        String serverSessionId = session.getId().toString();
+        // 判断是否已登录，如果已登录，则回跳
+        String code = RedisUtil.get(DISTRIBUTED_UPMS_SERVER_SESSION_ID + "_" + serverSessionId);
+        // code校验值
+        if (StringUtils.isNotBlank(code)) {
+            // 回跳
+            String backurl = request.getParameter("backurl");
+            String username = (String) subject.getPrincipal();
+            if (StringUtils.isBlank(backurl)) {
+                backurl = "/";
+            } else {
+                if (backurl.contains("?")) {
+                    backurl += "&upms_code=" + code + "&upms_username=" + username;
+                } else {
+                    backurl += "?upms_code=" + code + "&upms_username=" + username;
+                }
+            }
+            LOGGER.debug("认证中心帐号通过，带code回跳：{}", backurl);
+            return "redirect:" + backurl;
+        }
         return "/sso/login.jsp";
     }
 
@@ -109,7 +153,8 @@ public class SSOController extends BaseController{
             }
             // 更新session状态
             upmsSessionDao.updateStatus(sessionId, UpmsSession.OnlineStatus.on_line);
-
+            // 全局会话sessionId列表，供会话管理
+            RedisUtil.lpush(DISTRIBUTED_UPMS_SERVER_SESSION_IDS, sessionId.toString());
             // 默认验证帐号密码正确，创建code
             String code = UUID.randomUUID().toString();
             // 全局会话的code
@@ -126,6 +171,31 @@ public class SSOController extends BaseController{
         } else {
             return new UpmsResult(UpmsResultConstant.SUCCESS, backurl);
         }
+    }
+
+    @ApiOperation(value = "校验code")
+    @RequestMapping(value = "/code", method = RequestMethod.POST)
+    @ResponseBody
+    public Object code(HttpServletRequest request) {
+        String codeParam = request.getParameter("code");
+        String code = RedisUtil.get(DISTRIBUTED_UPMS_SERVER_CODE + "_" + codeParam);
+        if (StringUtils.isBlank(codeParam) || !codeParam.equals(code)) {
+            new UpmsResult(UpmsResultConstant.FAILED, "无效code");
+        }
+        return new UpmsResult(UpmsResultConstant.SUCCESS, code);
+    }
+
+    @ApiOperation(value = "退出登录")
+    @RequestMapping(value = "/logout", method = RequestMethod.GET)
+    public String logout(HttpServletRequest request) {
+        // shiro退出登录
+        SecurityUtils.getSubject().logout();
+        // 跳回原地址
+        String redirectUrl = request.getHeader("Referer");
+        if (null == redirectUrl) {
+            redirectUrl = "/";
+        }
+        return "redirect:" + redirectUrl;
     }
 
 }

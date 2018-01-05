@@ -13,4 +13,8 @@ import com.distributed.upms.dao.model.UpmsUserRoleExample;
 */
 public class UpmsUserRoleServiceMock extends BaseServiceMock<UpmsUserRoleMapper, UpmsUserRole, UpmsUserRoleExample> implements UpmsUserRoleService {
 
+    @Override
+    public int role(String[] roleIds, int id) {
+        return 0;
+    }
 }

@@ -12,4 +12,13 @@ import com.distributed.upms.dao.model.UpmsUserOrganizationExample;
 */
 public interface UpmsUserOrganizationService extends BaseService<UpmsUserOrganization, UpmsUserOrganizationExample> {
 
+    /**
+     * 用户组织
+     * @param organizationIds 组织ids
+     * @param id 用户id
+     * @return
+     */
+    int organization(String[] organizationIds, int id);
+
+
 }

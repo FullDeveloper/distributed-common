@@ -13,4 +13,8 @@ import com.distributed.upms.dao.model.UpmsUserOrganizationExample;
 */
 public class UpmsUserOrganizationServiceMock extends BaseServiceMock<UpmsUserOrganizationMapper, UpmsUserOrganization, UpmsUserOrganizationExample> implements UpmsUserOrganizationService {
 
+    @Override
+    public int organization(String[] organizationIds, int id) {
+        return 0;
+    }
 }
