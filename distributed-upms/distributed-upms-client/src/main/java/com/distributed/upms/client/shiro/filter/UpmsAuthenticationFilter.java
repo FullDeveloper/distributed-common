@@ -70,6 +70,7 @@ public class UpmsAuthenticationFilter extends AuthenticationFilter {
         return false;
     }
 
+    //如果isAccessAllowed返回false 则执行这个方法
     @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
         StringBuffer ssoServerUrl = new StringBuffer(PropertiesFileUtil.getInstance("distributed-upms-client").get("distributed.upms.sso.server.url"));

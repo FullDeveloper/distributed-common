@@ -12,6 +12,7 @@
         <module>distributed-common</module>
         <module>distributed-upms</module>
         <module>distributed-admin</module>
+        <module>distributed-cms</module>
     </modules>
 
 
